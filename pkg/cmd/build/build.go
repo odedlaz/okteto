@@ -246,6 +246,8 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
+	b.Args = append(b.Args, model.EnvVar{Name: model.OktetoNamespaceEnvVar, Value: okteto.Context().Namespace})
+
 	opts := &types.BuildOptions{
 		CacheFrom: b.CacheFrom,
 		Target:    b.Target,
