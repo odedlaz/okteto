@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/samber/lo"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -223,6 +224,10 @@ type Capabilities struct {
 type EnvVar struct {
 	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
 	Value string `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+func (v *EnvVar) String() string {
+	return fmt.Sprintf("%s=%s", v.Name, v.Value)
 }
 
 // Secret represents a development secret
@@ -858,14 +863,9 @@ func (dev *Dev) Save(path string) error {
 
 //SerializeBuildArgs returns build  aaargs as a llist of strings
 func SerializeBuildArgs(buildArgs Environment) []string {
-	result := []string{}
-	for _, e := range buildArgs {
-		result = append(
-			result,
-			fmt.Sprintf("%s=%s", e.Name, e.Value),
-		)
-	}
-	return result
+	serialized := lo.Map(buildArgs, func(envVar EnvVar, _ int) string { return envVar.String() })
+	sort.Strings(serialized) // stable serialization
+	return serialized
 }
 
 //SetLastBuiltAnnotation sets the dev timestacmp

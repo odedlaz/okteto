@@ -15,6 +15,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,12 +70,22 @@ func Test_validateImage(t *testing.T) {
 }
 
 func Test_OptsFromBuildInfo(t *testing.T) {
+	context := okteto.OktetoContext{
+		Namespace: "test",
+		Registry:  "registry.okteto",
+	}
+
+	defaultBuildArgs := model.Environment{
+		model.EnvVar{
+			Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
+		},
+	}
+
+	rawDefaultBuildArgs := model.SerializeBuildArgs(defaultBuildArgs)
+
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				Registry:  "registry.okteto",
-			},
+			"test": &context,
 		},
 		CurrentContext: "test",
 	}
@@ -126,7 +137,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				BuildArgs:  []string{},
+				BuildArgs:  rawDefaultBuildArgs,
 			},
 		},
 		{
@@ -136,7 +147,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			isOkteto:    false,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				BuildArgs:  []string{},
+				BuildArgs:  rawDefaultBuildArgs,
 			},
 		},
 		{
@@ -165,7 +176,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{"arg1=value1"},
+				BuildArgs:  lo.Union(rawDefaultBuildArgs, []string{"arg1=value1"}),
 			},
 		},
 		{
@@ -200,7 +211,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{"arg1=value1"},
+				BuildArgs:  lo.Union(rawDefaultBuildArgs, []string{"arg1=value1"}),
 			},
 		},
 		{
@@ -212,12 +223,12 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: lo.Union(defaultBuildArgs, model.Environment{
 					{
 						Name:  "arg1",
 						Value: "value1",
 					},
-				},
+				}),
 			},
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
@@ -230,7 +241,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{"arg1=value1"},
+				BuildArgs:  lo.Union(rawDefaultBuildArgs, []string{"arg1=value1"}),
 			},
 		},
 	}

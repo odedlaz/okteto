@@ -264,7 +264,9 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	// we don't want to replace build arguments that were already set by the user
 	notOverridenDefaultBuildArgs, _ := lo.Difference(lo.Keys(defaultBuildArgs), buildArgsNames)
 	for _, name := range notOverridenDefaultBuildArgs {
-		b.Args = append(b.Args, model.EnvVar{Name: name, Value: defaultBuildArgs[name]})
+		if value := defaultBuildArgs[name]; value != "" {
+			b.Args = append(b.Args, model.EnvVar{Name: name, Value: defaultBuildArgs[name]})
+		}
 	}
 
 	opts := &types.BuildOptions{
