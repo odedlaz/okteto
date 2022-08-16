@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -246,7 +248,24 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
-	b.Args = append(b.Args, model.EnvVar{Name: model.OktetoNamespaceEnvVar, Value: okteto.Context().Namespace})
+	defaultBuildArgs := map[string]string{
+		model.OktetoContextEnvVar:         okteto.Context().Name,
+		model.OktetoUserNameEnvVar:        okteto.Context().Username,
+		model.OktetoTokenEnvVar:           okteto.Context().Token,
+		model.OktetoNamespaceEnvVar:       okteto.Context().Namespace,
+		model.OktetoBuildkitHostURLEnvVar: okteto.Context().Builder,
+		model.OktetoRegistryURLEnvVar:     okteto.Context().Registry,
+	}
+
+	buildArgsNames := lo.Map(b.Args, func(x model.EnvVar, _ int) string {
+		return x.Name
+	})
+
+	// we don't want to replace build arguments that were already set by the user
+	notOverridenDefaultBuildArgs, _ := lo.Difference(lo.Keys(defaultBuildArgs), buildArgsNames)
+	for _, name := range notOverridenDefaultBuildArgs {
+		b.Args = append(b.Args, model.EnvVar{Name: name, Value: defaultBuildArgs[name]})
+	}
 
 	opts := &types.BuildOptions{
 		CacheFrom: b.CacheFrom,
